@@ -2,6 +2,9 @@
 
 A self-hosted, mobile-friendly web app for managing a plant database and designing garden layouts. Identify plants from photos, look up full botanical data, and drag plants onto a canvas map of your yard.
 
+<img width="1095" height="617" alt="image" src="https://github.com/user-attachments/assets/7655dbc1-9b60-4750-b145-8c933ac85a9d" />
+
+
 ---
 
 ## Features
