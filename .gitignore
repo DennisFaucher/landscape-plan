@@ -1,0 +1,17 @@
+# Secrets — never commit these
+.env
+.users
+
+# User data
+data/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor / tool
+.claude/
+.vscode/
+.idea/
+*.swp

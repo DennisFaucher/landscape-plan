@@ -1,0 +1,521 @@
+{% extends "base.html" %}
+{% block title %}{{ plant.common_name if plant else "New Plant" }}{% endblock %}
+
+{% block content %}
+{% macro val(field, default='') %}{{ plant[field] if plant and plant[field] is not none else default }}{% endmacro %}
+{% macro ival(field) %}{{ plant[field] if plant and plant[field] is not none else '' }}{% endmacro %}
+
+<div class="d-flex align-items-center mb-4 gap-2 flex-wrap">
+  <a href="/plants" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h2 class="mb-0 text-forest flex-grow-1">
+    {% if plant %}{{ plant.common_name or "Unnamed Plant" }}
+    {% else %}<i class="bi bi-plus-circle me-2"></i>New Plant{% endif %}
+  </h2>
+  {% if plant %}
+  <form method="post" action="/plants/{{ plant.id }}/delete"
+        onsubmit="return confirm('Delete this plant?')">
+    <button type="submit" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-trash me-1"></i>Delete
+    </button>
+  </form>
+  {% endif %}
+</div>
+
+<form method="post" action="{{ action }}" enctype="multipart/form-data">
+<div class="row g-4">
+
+  <!-- Photo column -->
+  <div class="col-md-3">
+    {% if plant and plant.image_path %}
+    <div class="card mb-3">
+      <img src="{{ plant.image_path }}" class="card-img-top" style="object-fit:cover;max-height:260px" alt="{{ plant.common_name }}">
+      <div class="card-body p-2 text-center"><small class="text-muted">Current photo</small></div>
+    </div>
+    {% endif %}
+    <div class="card mb-3">
+      <div class="card-body">
+        <label class="form-label fw-semibold">
+          {% if plant and plant.image_path %}Replace Photo{% else %}Photo{% endif %}
+        </label>
+        <input type="file" name="file" class="form-control" accept="image/*">
+      </div>
+    </div>
+    {% if plant and plant.trefle_image_url %}
+    <div class="card mb-3">
+      <div class="card-header small text-muted">Trefle reference</div>
+      <img src="{{ plant.trefle_image_url }}" class="card-img-bottom" style="object-fit:cover;max-height:160px" alt="">
+    </div>
+    {% endif %}
+
+    <!-- Trefle category images -->
+    {% set img_fields = [("Flower","image_flower","flower2"),("Leaf","image_leaf","tree"),("Habit","image_habit","image"),("Fruit","image_fruit","circle"),("Bark","image_bark","layers"),("Other","image_other","camera")] %}
+    {% for label, field, icon in img_fields %}
+      {% if plant and plant[field] %}
+      <div class="card mb-2">
+        <div class="card-header small text-muted py-1"><i class="bi bi-{{ icon }} me-1"></i>{{ label }}</div>
+        <img src="{{ plant[field] }}" class="card-img-bottom" style="object-fit:cover;max-height:120px" alt="{{ label }}">
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <!-- Main column -->
+  <div class="col-md-9">
+    <div class="accordion" id="plantAccordion">
+
+      <!-- ── Identity ─────────────────────────────────────────────── -->
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#sec-identity">
+            <i class="bi bi-tag me-2"></i>Identity &amp; Taxonomy
+          </button>
+        </h2>
+        <div id="sec-identity" class="accordion-collapse collapse show" data-bs-parent="#plantAccordion">
+          <div class="accordion-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Common Name <span class="text-danger">*</span></label>
+                <input type="text" name="common_name" class="form-control" required
+                       value="{{ plant.common_name if plant else '' }}">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Scientific Name</label>
+                <input type="text" name="scientific_name" class="form-control fst-italic"
+                       value="{{ plant.scientific_name if plant else '' }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Family</label>
+                <input type="text" name="family" class="form-control"
+                       value="{{ plant.family if plant else '' }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Family Common Name</label>
+                <input type="text" name="family_common_name" class="form-control"
+                       value="{{ plant.family_common_name if plant else '' }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Genus</label>
+                <input type="text" name="genus" class="form-control"
+                       value="{{ plant.genus if plant else '' }}">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Rank</label>
+                <input type="text" name="rank" class="form-control"
+                       value="{{ plant.rank if plant else '' }}" placeholder="species, var…">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <input type="text" name="status" class="form-control"
+                       value="{{ plant.status if plant else '' }}" placeholder="accepted…">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Year</label>
+                <input type="number" name="year" class="form-control"
+                       value="{{ plant.year if plant and plant.year is not none else '' }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Author</label>
+                <input type="text" name="author" class="form-control"
+                       value="{{ plant.author if plant else '' }}">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Bibliography</label>
+                <input type="text" name="bibliography" class="form-control"
+                       value="{{ plant.bibliography if plant else '' }}">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Duration <small class="text-muted">(comma-separated)</small></label>
+                <input type="text" name="duration" class="form-control"
+                       value="{{ plant.duration | join_json if plant else '' }}"
+                       placeholder="annual, perennial…">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Edible?</label>
+                <select name="edible" class="form-select">
+                  <option value="">Unknown</option>
+                  <option value="true"  {% if plant and plant.edible == true  %}selected{% endif %}>Yes</option>
+                  <option value="false" {% if plant and plant.edible == false %}selected{% endif %}>No</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Vegetable?</label>
+                <select name="vegetable" class="form-select">
+                  <option value="">Unknown</option>
+                  <option value="true"  {% if plant and plant.vegetable == true  %}selected{% endif %}>Yes</option>
+                  <option value="false" {% if plant and plant.vegetable == false %}selected{% endif %}>No</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Edible Part(s) <small class="text-muted">(comma-separated)</small></label>
+                <input type="text" name="edible_part" class="form-control"
+                       value="{{ plant.edible_part | join_json if plant else '' }}"
+                       placeholder="leaves, roots…">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Trefle ID</label>
+                <input type="number" name="trefle_id" class="form-control"
+                       value="{{ plant.trefle_id if plant and plant.trefle_id is not none else '' }}">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Trefle Slug</label>
+                <input type="text" name="trefle_slug" class="form-control"
+                       value="{{ plant.trefle_slug if plant else '' }}">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Synonyms <small class="text-muted">(semicolon-separated)</small></label>
+                <input type="text" name="synonyms" class="form-control"
+                       value="{{ plant.synonyms if plant else '' }}"
+                       placeholder="Lavandula vera (DC.); Lavandula officinalis (Chaix)">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Native Distribution <small class="text-muted">(JSON array of zone names)</small></label>
+                <input type="text" name="distribution_native" class="form-control font-monospace small"
+                       value="{{ plant.distribution_native if plant else '[]' }}">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Growth Conditions ─────────────────────────────────────── -->
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sec-growth">
+            <i class="bi bi-sun me-2"></i>Growth Conditions
+          </button>
+        </h2>
+        <div id="sec-growth" class="accordion-collapse collapse" data-bs-parent="#plantAccordion">
+          <div class="accordion-body">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label">Light <small class="text-muted">0–10</small></label>
+                <input type="number" name="light" class="form-control" min="0" max="10"
+                       value="{{ plant.light if plant and plant.light is not none else '' }}">
+                <div class="form-text">0 = no light, 10 = intense sun</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Soil Humidity <small class="text-muted">0–10</small></label>
+                <input type="number" name="soil_humidity" class="form-control" min="0" max="10"
+                       value="{{ plant.soil_humidity if plant and plant.soil_humidity is not none else '' }}">
+                <div class="form-text">0 = xerophile, 10 = subaquatic</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Atmospheric Humidity <small class="text-muted">0–10</small></label>
+                <input type="number" name="atmospheric_humidity" class="form-control" min="0" max="10"
+                       value="{{ plant.atmospheric_humidity if plant and plant.atmospheric_humidity is not none else '' }}">
+                <div class="form-text">0 = ≤10%, 10 = ≥90%</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Soil Texture <small class="text-muted">0–10</small></label>
+                <input type="number" name="soil_texture" class="form-control" min="0" max="10"
+                       value="{{ plant.soil_texture if plant and plant.soil_texture is not none else '' }}">
+                <div class="form-text">0 = clay, 10 = rock</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Soil Nutriments <small class="text-muted">0–10</small></label>
+                <input type="number" name="soil_nutriments" class="form-control" min="0" max="10"
+                       value="{{ plant.soil_nutriments if plant and plant.soil_nutriments is not none else '' }}">
+                <div class="form-text">0 = oligotrophic, 10 = hypereutrophic</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Soil Salinity <small class="text-muted">0–10</small></label>
+                <input type="number" name="soil_salinity" class="form-control" min="0" max="10"
+                       value="{{ plant.soil_salinity if plant and plant.soil_salinity is not none else '' }}">
+                <div class="form-text">0 = untolerant, 10 = hyperhaline</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">pH Minimum</label>
+                <input type="number" name="ph_minimum" class="form-control" step="0.1" min="0" max="14"
+                       value="{{ plant.ph_minimum if plant and plant.ph_minimum is not none else '' }}">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">pH Maximum</label>
+                <input type="number" name="ph_maximum" class="form-control" step="0.1" min="0" max="14"
+                       value="{{ plant.ph_maximum if plant and plant.ph_maximum is not none else '' }}">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Min Temperature (°C)</label>
+                <input type="number" name="minimum_temperature_deg_c" class="form-control" step="0.5"
+                       value="{{ plant.minimum_temperature_deg_c if plant and plant.minimum_temperature_deg_c is not none else '' }}">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Max Temperature (°C)</label>
+                <input type="number" name="maximum_temperature_deg_c" class="form-control" step="0.5"
+                       value="{{ plant.maximum_temperature_deg_c if plant and plant.maximum_temperature_deg_c is not none else '' }}">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Min Precipitation (mm/yr)</label>
+                <input type="number" name="minimum_precipitation_mm" class="form-control"
+                       value="{{ plant.minimum_precipitation_mm if plant and plant.minimum_precipitation_mm is not none else '' }}">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Max Precipitation (mm/yr)</label>
+                <input type="number" name="maximum_precipitation_mm" class="form-control"
+                       value="{{ plant.maximum_precipitation_mm if plant and plant.maximum_precipitation_mm is not none else '' }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Min Root Depth (cm)</label>
+                <input type="number" name="minimum_root_depth_cm" class="form-control"
+                       value="{{ plant.minimum_root_depth_cm if plant and plant.minimum_root_depth_cm is not none else '' }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Days to Harvest</label>
+                <input type="number" name="days_to_harvest" class="form-control"
+                       value="{{ plant.days_to_harvest if plant and plant.days_to_harvest is not none else '' }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Row Spacing (cm)</label>
+                <input type="number" name="row_spacing_cm" class="form-control"
+                       value="{{ plant.row_spacing_cm if plant and plant.row_spacing_cm is not none else '' }}">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Seasons ───────────────────────────────────────────────── -->
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sec-seasons">
+            <i class="bi bi-calendar3 me-2"></i>Seasons
+          </button>
+        </h2>
+        <div id="sec-seasons" class="accordion-collapse collapse" data-bs-parent="#plantAccordion">
+          <div class="accordion-body">
+            <div class="row g-3">
+              {% for label, field in [("Bloom Months","bloom_months"),("Growth Months","growth_months"),("Fruit Months","fruit_months")] %}
+              <div class="col-md-4">
+                <label class="form-label">{{ label }} <small class="text-muted">(comma-separated)</small></label>
+                <input type="text" name="{{ field }}" class="form-control"
+                       value="{{ plant[field] | join_json if plant else '' }}"
+                       placeholder="jan, feb, mar…">
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Appearance ────────────────────────────────────────────── -->
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sec-appearance">
+            <i class="bi bi-palette me-2"></i>Appearance
+          </button>
+        </h2>
+        <div id="sec-appearance" class="accordion-collapse collapse" data-bs-parent="#plantAccordion">
+          <div class="accordion-body">
+            <h6 class="text-muted mb-3">Flower</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label">Flower Colors <small class="text-muted">(comma-separated)</small></label>
+                <input type="text" name="flower_color" class="form-control"
+                       value="{{ plant.flower_color | join_json if plant else '' }}"
+                       placeholder="white, pink…">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Flower Conspicuous?</label>
+                <select name="flower_conspicuous" class="form-select">
+                  <option value="">Unknown</option>
+                  <option value="true"  {% if plant and plant.flower_conspicuous == true  %}selected{% endif %}>Yes</option>
+                  <option value="false" {% if plant and plant.flower_conspicuous == false %}selected{% endif %}>No</option>
+                </select>
+              </div>
+            </div>
+            <h6 class="text-muted mb-3">Foliage</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-4">
+                <label class="form-label">Foliage Texture</label>
+                <select name="foliage_texture" class="form-select">
+                  <option value="">Unknown</option>
+                  {% for opt in ["fine","medium","coarse"] %}
+                  <option value="{{ opt }}" {% if plant and plant.foliage_texture == opt %}selected{% endif %}>{{ opt.capitalize() }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-5">
+                <label class="form-label">Foliage Colors <small class="text-muted">(comma-separated)</small></label>
+                <input type="text" name="foliage_color" class="form-control"
+                       value="{{ plant.foliage_color | join_json if plant else '' }}"
+                       placeholder="green, variegated…">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Leaf Retention?</label>
+                <select name="leaf_retention" class="form-select">
+                  <option value="">Unknown</option>
+                  <option value="true"  {% if plant and plant.leaf_retention == true  %}selected{% endif %}>Yes (Evergreen)</option>
+                  <option value="false" {% if plant and plant.leaf_retention == false %}selected{% endif %}>No (Deciduous)</option>
+                </select>
+              </div>
+            </div>
+            <h6 class="text-muted mb-3">Fruit / Seed</h6>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Fruit Colors <small class="text-muted">(comma-separated)</small></label>
+                <input type="text" name="fruit_color" class="form-control"
+                       value="{{ plant.fruit_color | join_json if plant else '' }}"
+                       placeholder="red, orange…">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Fruit Shape</label>
+                <input type="text" name="fruit_shape" class="form-control"
+                       value="{{ plant.fruit_shape if plant else '' }}">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Fruit Conspicuous?</label>
+                <select name="fruit_conspicuous" class="form-select">
+                  <option value="">Unknown</option>
+                  <option value="true"  {% if plant and plant.fruit_conspicuous == true  %}selected{% endif %}>Yes</option>
+                  <option value="false" {% if plant and plant.fruit_conspicuous == false %}selected{% endif %}>No</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Seed Persistence?</label>
+                <select name="seed_persistence" class="form-select">
+                  <option value="">Unknown</option>
+                  <option value="true"  {% if plant and plant.seed_persistence == true  %}selected{% endif %}>Yes</option>
+                  <option value="false" {% if plant and plant.seed_persistence == false %}selected{% endif %}>No</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Characteristics ───────────────────────────────────────── -->
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sec-char">
+            <i class="bi bi-info-circle me-2"></i>Characteristics
+          </button>
+        </h2>
+        <div id="sec-char" class="accordion-collapse collapse" data-bs-parent="#plantAccordion">
+          <div class="accordion-body">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label">Toxicity</label>
+                <select name="toxicity" class="form-select">
+                  <option value="">Unknown</option>
+                  {% for opt in ["none","low","medium","high"] %}
+                  <option value="{{ opt }}" {% if plant and plant.toxicity == opt %}selected{% endif %}>{{ opt.capitalize() }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Ligneous Type</label>
+                <select name="ligneous_type" class="form-select">
+                  <option value="">Unknown</option>
+                  {% for opt in ["liana","subshrub","shrub","tree","parasite"] %}
+                  <option value="{{ opt }}" {% if plant and plant.ligneous_type == opt %}selected{% endif %}>{{ opt.capitalize() }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Growth Rate</label>
+                <input type="text" name="growth_rate" class="form-control"
+                       value="{{ plant.growth_rate if plant else '' }}" placeholder="slow, moderate, fast">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Nitrogen Fixation</label>
+                <input type="text" name="nitrogen_fixation" class="form-control"
+                       value="{{ plant.nitrogen_fixation if plant else '' }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Growth Form</label>
+                <input type="text" name="growth_form" class="form-control"
+                       value="{{ plant.growth_form if plant else '' }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Growth Habit</label>
+                <input type="text" name="growth_habit" class="form-control"
+                       value="{{ plant.growth_habit if plant else '' }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Shape &amp; Orientation</label>
+                <input type="text" name="shape_and_orientation" class="form-control"
+                       value="{{ plant.shape_and_orientation if plant else '' }}">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Average Height (cm)</label>
+                <input type="number" name="average_height_cm" class="form-control"
+                       value="{{ plant.average_height_cm if plant and plant.average_height_cm is not none else '' }}">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Maximum Height (cm)</label>
+                <input type="number" name="maximum_height_cm" class="form-control"
+                       value="{{ plant.maximum_height_cm if plant and plant.maximum_height_cm is not none else '' }}">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Spread (cm)</label>
+                <input type="number" name="spread_cm" class="form-control"
+                       value="{{ plant.spread_cm if plant and plant.spread_cm is not none else '' }}">
+              </div>
+              <!-- Image URL fields -->
+              {% for label, field in [("Trefle Main Image","trefle_image_url"),("Flower Image","image_flower"),("Leaf Image","image_leaf"),("Habit Image","image_habit"),("Fruit Image","image_fruit"),("Bark Image","image_bark"),("Other Image","image_other")] %}
+              <div class="col-md-6">
+                <label class="form-label">{{ label }} URL</label>
+                <input type="url" name="{{ field }}" class="form-control"
+                       value="{{ plant[field] if plant else '' }}">
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Description & Cultivation ─────────────────────────────── -->
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sec-desc">
+            <i class="bi bi-book me-2"></i>Description &amp; Cultivation
+          </button>
+        </h2>
+        <div id="sec-desc" class="accordion-collapse collapse" data-bs-parent="#plantAccordion">
+          <div class="accordion-body">
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label fw-semibold">Description <small class="text-muted">(from Trefle growth data)</small></label>
+                <textarea name="description" class="form-control" rows="4">{{ plant.description if plant else '' }}</textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Observations <small class="text-muted">(habit notes from Trefle)</small></label>
+                <textarea name="observations" class="form-control" rows="3">{{ plant.observations if plant else '' }}</textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Sowing Instructions</label>
+                <textarea name="sowing" class="form-control" rows="3">{{ plant.sowing if plant else '' }}</textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Personal Notes ─────────────────────────────────────────── -->
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sec-notes">
+            <i class="bi bi-journal-text me-2"></i>Personal Notes
+          </button>
+        </h2>
+        <div id="sec-notes" class="accordion-collapse collapse" data-bs-parent="#plantAccordion">
+          <div class="accordion-body">
+            <textarea name="notes" class="form-control" rows="4"
+                      placeholder="Location in yard, purchase date, source, observations…">{{ plant.notes if plant else '' }}</textarea>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /accordion -->
+
+    <div class="mt-4 d-flex gap-2">
+      <button type="submit" class="btn btn-forest btn-lg">
+        <i class="bi bi-check-circle me-1"></i>Save Plant
+      </button>
+      <a href="/plants" class="btn btn-outline-secondary btn-lg">Cancel</a>
+    </div>
+  </div>
+</div>
+</form>
+{% endblock %}

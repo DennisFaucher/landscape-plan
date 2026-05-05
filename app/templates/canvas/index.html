@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Canvas Design{% endblock %}
+{% block main_class %}container-fluid p-0{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Layout ────────────────────────────────────────────────────────── */
+  .canvas-layout {
+    display: flex;
+    height: calc(100vh - 56px);
+    overflow: hidden;
+  }
+
+  /* ── Desktop sidebar ───────────────────────────────────────────────── */
+  .sidebar {
+    width: 220px; min-width: 180px; max-width: 300px;
+    background: #f8faf5; border-right: 1px solid #c8dbb8;
+    display: flex; flex-direction: column; overflow: hidden;
+    resize: horizontal; flex-shrink: 0;
+  }
+  .sidebar-header {
+    padding: .65rem 1rem; background: #2d7a2d; color: #fff;
+    font-weight: 600; font-size: .9rem; flex-shrink: 0;
+  }
+  .sidebar-search { padding: .4rem .5rem; flex-shrink: 0; }
+  .sidebar-plants { overflow-y: auto; flex: 1; padding: .4rem; }
+
+  /* ── Plant tiles (shared desktop + mobile) ─────────────────────────── */
+  .plant-tile {
+    cursor: grab; border: 2px solid transparent; border-radius: 8px;
+    padding: 4px; margin-bottom: 6px; background: #fff;
+    transition: border-color .15s, box-shadow .15s;
+    user-select: none; touch-action: none;
+  }
+  .plant-tile:hover, .plant-tile.touch-active {
+    border-color: #2d7a2d; box-shadow: 0 2px 6px rgba(0,0,0,.12);
+  }
+  .plant-tile img {
+    width: 100%; height: 80px; object-fit: cover;
+    border-radius: 4px; display: block; pointer-events: none;
+  }
+  .plant-tile .name {
+    font-size: .75rem; text-align: center; margin-top: 3px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* Mobile offcanvas gallery: horizontal scroll row */
+  .mobile-gallery {
+    display: flex; gap: 8px; padding: .5rem;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  .mobile-gallery .plant-tile {
+    flex: 0 0 100px; margin-bottom: 0;
+  }
+  .mobile-gallery .plant-tile img { height: 70px; }
+
+  /* ── Canvas area ───────────────────────────────────────────────────── */
+  .canvas-area {
+    flex: 1; overflow: hidden; background: #e8ede0;
+    display: flex; flex-direction: column; min-width: 0;
+  }
+  .canvas-toolbar {
+    padding: .35rem .5rem; background: #fff; border-bottom: 1px solid #dde;
+    display: flex; align-items: center; gap: .35rem;
+    flex-shrink: 0; flex-wrap: nowrap; overflow-x: auto;
+  }
+  .canvas-toolbar .hint {
+    margin-left: auto; color: #999; font-size: .75rem; white-space: nowrap;
+  }
+  .canvas-wrapper {
+    flex: 1; overflow: auto; display: flex;
+    align-items: flex-start; justify-content: flex-start;
+    padding: 12px;
+    /* Prevent browser pinch-zoom — we handle it ourselves */
+    touch-action: none;
+  }
+  #c { display: block; touch-action: none; }
+  .canvas-drop-target { position: relative; touch-action: none; }
+  #dropOverlay {
+    position: absolute; inset: 0; border: 3px dashed #2d7a2d;
+    background: rgba(45,122,45,.1); border-radius: 4px;
+    display: none; align-items: center; justify-content: center;
+    font-size: 1.4rem; color: #2d7a2d; pointer-events: none; z-index: 10;
+  }
+  #saveStatus { font-size: .8rem; color: #666; white-space: nowrap; }
+
+  /* Pan mode active state */
+  #btnPan.active { background: #2d7a2d; color: #fff; border-color: #2d7a2d; }
+
+  /* Touch drag ghost */
+  #touchGhost {
+    position: fixed; z-index: 9999; pointer-events: none;
+    width: 72px; height: 72px; border-radius: 8px; overflow: hidden;
+    border: 3px solid #2d7a2d; box-shadow: 0 4px 16px rgba(0,0,0,.3);
+    transform: translate(-50%, -50%); display: none;
+  }
+  #touchGhost img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* ── Mobile overrides ──────────────────────────────────────────────── */
+  @media (max-width: 767px) {
+    .sidebar { display: none !important; }
+    .hint { display: none !important; }
+    .canvas-toolbar { gap: .25rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="canvas-layout">
+
+  <!-- Desktop sidebar -->
+  <div class="sidebar d-none d-md-flex flex-column">
+    <div class="sidebar-header"><i class="bi bi-flower2 me-1"></i>Plants</div>
+    <div class="sidebar-search">
+      <input type="text" id="sidebarSearch" class="form-control form-control-sm" placeholder="Search…">
+    </div>
+    <div class="sidebar-plants" id="plantGallery">
+      <div class="text-muted small text-center py-3">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Canvas area -->
+  <div class="canvas-area">
+
+    <!-- Toolbar -->
+    <div class="canvas-toolbar">
+      <!-- Mobile: open plant panel -->
+      <button class="btn btn-sm btn-forest d-md-none"
+              data-bs-toggle="offcanvas" data-bs-target="#mobilePlants">
+        <i class="bi bi-flower2 me-1"></i>Plants
+      </button>
+      <div class="vr d-md-none mx-1"></div>
+
+      <button class="btn btn-sm btn-outline-secondary" id="btnZoomIn"  title="Zoom in"><i class="bi bi-zoom-in"></i></button>
+      <button class="btn btn-sm btn-outline-secondary" id="btnZoomOut" title="Zoom out"><i class="bi bi-zoom-out"></i></button>
+      <button class="btn btn-sm btn-outline-secondary" id="btnZoomReset" title="Fit canvas"><i class="bi bi-arrows-fullscreen"></i></button>
+
+      <div class="vr mx-1"></div>
+
+      <!-- Pan mode toggle (essential on mobile, handy on desktop too) -->
+      <button class="btn btn-sm btn-outline-secondary" id="btnPan" title="Pan mode (drag to move view)">
+        <i class="bi bi-arrows-move"></i>
+      </button>
+
+      <div class="vr mx-1"></div>
+
+      <button class="btn btn-sm btn-outline-danger"    id="btnDelete"   title="Delete selected"><i class="bi bi-trash"></i></button>
+      <button class="btn btn-sm btn-outline-secondary" id="btnBringFwd" title="Bring forward"><i class="bi bi-layers-fill"></i></button>
+      <button class="btn btn-sm btn-outline-secondary" id="btnSendBack" title="Send backward"><i class="bi bi-layers"></i></button>
+
+      <div class="vr mx-1"></div>
+
+      <button class="btn btn-sm btn-forest" id="btnSave">
+        <i class="bi bi-floppy me-1"></i>Save
+      </button>
+      <span id="saveStatus"></span>
+
+      <span class="hint">
+        <i class="bi bi-info-circle me-1"></i>Drag plants · Scroll to zoom · Alt+drag to pan
+      </span>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-wrapper" id="canvasWrapper">
+      <div class="canvas-drop-target" id="dropTarget">
+        <canvas id="c"></canvas>
+        <div id="dropOverlay"><i class="bi bi-plus-circle me-2"></i>Drop to add</div>
+      </div>
+    </div>
+
+  </div><!-- /canvas-area -->
+</div><!-- /canvas-layout -->
+
+<!-- ── Mobile plant panel (offcanvas bottom sheet) ─────────────────────── -->
+<div class="offcanvas offcanvas-bottom" id="mobilePlants"
+     tabindex="-1" style="height:48vh; border-radius:16px 16px 0 0">
+  <div class="offcanvas-header py-2" style="background:#2d7a2d; color:#fff; border-radius:16px 16px 0 0">
+    <h6 class="offcanvas-title mb-0">
+      <i class="bi bi-flower2 me-1"></i>Plants — drag onto canvas
+    </h6>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body p-0">
+    <div class="px-2 pt-2">
+      <input type="text" id="mobileSearch" class="form-control form-control-sm" placeholder="Search plants…">
+    </div>
+    <div class="mobile-gallery" id="mobileGallery">
+      <div class="text-muted small py-3 px-2">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Touch drag ghost image -->
+<div id="touchGhost"><img id="touchGhostImg" src="" alt=""></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/fabric.min.js"></script>
+<script src="/static/js/canvas.js"></script>
+{% endblock %}

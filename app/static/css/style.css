@@ -1,0 +1,72 @@
+:root {
+  --forest: #2d7a2d;
+  --forest-light: #e8f3e8;
+  --forest-border: #c8dbb8;
+  --cream: #f5f8f0;
+}
+
+body { background: var(--cream); }
+
+.login-bg { background: linear-gradient(135deg, #1a4d1a 0%, #3d8f3d 100%); }
+
+/* Navbar */
+.bg-forest { background-color: var(--forest) !important; }
+
+/* Text & badges */
+.text-forest { color: var(--forest) !important; }
+.bg-forest { background-color: var(--forest) !important; }
+.bg-forest-light { background-color: var(--forest-light) !important; }
+
+/* Buttons */
+.btn-forest {
+  background-color: var(--forest);
+  border-color: var(--forest);
+  color: #fff;
+}
+.btn-forest:hover, .btn-forest:focus {
+  background-color: #235a23;
+  border-color: #235a23;
+  color: #fff;
+}
+.btn-outline-forest {
+  border-color: var(--forest);
+  color: var(--forest);
+}
+.btn-outline-forest:hover {
+  background-color: var(--forest);
+  color: #fff;
+}
+
+/* Cards */
+.card { border-color: var(--forest-border); }
+
+/* Plant cards in grid */
+.plant-card {
+  transition: transform .15s, box-shadow .15s;
+  border-color: var(--forest-border);
+}
+.plant-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 14px rgba(45,122,45,.18);
+  border-color: var(--forest);
+}
+.plant-thumb {
+  height: 150px;
+  object-fit: cover;
+  background: var(--forest-light);
+}
+.plant-thumb-placeholder {
+  height: 150px;
+  background: var(--forest-light);
+}
+
+/* Suggestion cards */
+.suggestion-card { transition: border-color .15s; cursor: pointer; }
+.suggestion-card:hover { border-color: var(--forest); }
+.border-forest { border-color: var(--forest) !important; }
+
+/* Forms */
+.form-control:focus, .form-select:focus {
+  border-color: var(--forest);
+  box-shadow: 0 0 0 .2rem rgba(45,122,45,.25);
+}

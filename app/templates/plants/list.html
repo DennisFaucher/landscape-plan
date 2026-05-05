@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Plant Database{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h2 class="mb-0 text-forest"><i class="bi bi-flower2 me-2"></i>Plant Database</h2>
+  <div class="d-flex gap-2">
+    <a href="/plants/upload" class="btn btn-forest">
+      <i class="bi bi-cloud-upload me-1"></i>Add Plant via Photo
+    </a>
+    <a href="/plants/new" class="btn btn-outline-forest">
+      <i class="bi bi-plus-circle me-1"></i>Add Manually
+    </a>
+  </div>
+</div>
+
+<div class="mb-3">
+  <input type="text" id="search" class="form-control" placeholder="Search plants…">
+</div>
+
+{% if plants %}
+<div class="row g-3" id="plant-grid">
+  {% for plant in plants %}
+  <div class="col-6 col-md-4 col-lg-3 plant-card-wrap" data-name="{{ (plant.common_name ~ ' ' ~ plant.scientific_name)|lower }}">
+    <a href="/plants/{{ plant.id }}" class="text-decoration-none">
+      <div class="card plant-card h-100">
+        {% if plant.thumbnail_path %}
+        <img src="{{ plant.thumbnail_path }}" class="card-img-top plant-thumb" alt="{{ plant.common_name }}">
+        {% else %}
+        <div class="card-img-top plant-thumb-placeholder d-flex align-items-center justify-content-center">
+          <i class="bi bi-flower1 text-muted" style="font-size:3rem"></i>
+        </div>
+        {% endif %}
+        <div class="card-body p-2">
+          <p class="mb-0 fw-semibold text-truncate">{{ plant.common_name or "Unnamed" }}</p>
+          <p class="mb-0 text-muted small fst-italic text-truncate">{{ plant.scientific_name }}</p>
+          <div class="mt-1 d-flex flex-wrap gap-1">
+            {% if plant.light is not none %}<span class="badge bg-light text-muted small"><i class="bi bi-sun me-1"></i>{{ plant.light }}/10</span>{% endif %}
+            {% if plant.toxicity and plant.toxicity != 'none' %}<span class="badge bg-danger small">{{ plant.toxicity }}</span>{% endif %}
+            {% if plant.duration %}<span class="badge bg-light text-muted small">{{ plant.duration | join_json }}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-flower1" style="font-size:4rem"></i>
+  <p class="mt-3 fs-5">No plants yet. Add your first plant to get started!</p>
+  <a href="/plants/upload" class="btn btn-forest mt-2">
+    <i class="bi bi-cloud-upload me-1"></i>Add Plant via Photo
+  </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('search').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('.plant-card-wrap').forEach(el => {
+    el.style.display = el.dataset.name.includes(q) ? '' : 'none';
+  });
+});
+</script>
+{% endblock %}

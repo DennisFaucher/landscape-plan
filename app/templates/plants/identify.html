@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Identify Plant{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+  <a href="/plants/crop/{{ temp_id }}" class="btn btn-outline-secondary btn-sm me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h2 class="mb-0 text-forest"><i class="bi bi-search me-2"></i>Identify Plant</h2>
+</div>
+
+{% if error %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle me-1"></i>{{ error }}
+  <br><small>Fill in the details manually below.</small>
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-md-3">
+    <div class="card">
+      <div class="card-header bg-forest-light fw-semibold small">Your Photo</div>
+      <img src="{{ temp_url }}" class="card-img-bottom" style="object-fit:cover;max-height:300px">
+    </div>
+  </div>
+
+  <div class="col-md-9">
+    {% if suggestions %}
+    <h5 class="text-forest mb-3">Select the matching plant:</h5>
+    <div class="row g-3" id="suggestions">
+      {% for s in suggestions %}
+      <div class="col-md-6">
+        <div class="card suggestion-card h-100" data-index="{{ loop.index0 }}">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+              <div>
+                <h6 class="mb-0">{{ s.common_name or s.scientific_name }}</h6>
+                <small class="text-muted fst-italic">{{ s.scientific_name }}</small>
+                {% if s.family %}<small class="text-muted d-block">{{ s.family }}{% if s.genus %} · {{ s.genus }}{% endif %}</small>{% endif %}
+              </div>
+              <span class="badge bg-forest">{{ s.probability }}%</span>
+            </div>
+            {% if s.similar_images %}
+            <div class="d-flex gap-1 my-2">
+              {% for img_url in s.similar_images %}
+              <img src="{{ img_url }}" class="rounded" style="height:56px;width:56px;object-fit:cover" alt="">
+              {% endfor %}
+              {% if s.trefle_image_url %}
+              <img src="{{ s.trefle_image_url }}" class="rounded" style="height:56px;width:56px;object-fit:cover" alt="">
+              {% endif %}
+            </div>
+            {% endif %}
+            <div class="small text-muted mb-2">
+              {% if s.light is not none %}<span class="me-2"><i class="bi bi-sun me-1"></i>Light {{ s.light }}/10</span>{% endif %}
+              {% if s.soil_humidity is not none %}<span class="me-2"><i class="bi bi-droplet me-1"></i>Water {{ s.soil_humidity }}/10</span>{% endif %}
+              {% if s.toxicity and s.toxicity != 'none' %}<span class="me-2 text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Toxicity: {{ s.toxicity }}</span>{% endif %}
+              {% if s.bloom_months %}<span class="me-2"><i class="bi bi-flower1 me-1"></i>{{ s.bloom_months | months_json }}</span>{% endif %}
+              {% if s.duration %}<span><i class="bi bi-calendar3 me-1"></i>{{ s.duration | join_json }}</span>{% endif %}
+            </div>
+            {% if s.description %}
+            <p class="small text-muted mb-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ s.description }}</p>
+            {% elif s.observations %}
+            <p class="small text-muted mb-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ s.observations }}</p>
+            {% endif %}
+            <button class="btn btn-forest btn-sm mt-1 w-100 btn-select" data-index="{{ loop.index0 }}">
+              <i class="bi bi-check me-1"></i>Select This Plant
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info"><i class="bi bi-info-circle me-1"></i>No suggestions found. Fill in the details below.</div>
+    {% endif %}
+
+    <!-- Confirm / manual form -->
+    <div class="card mt-4" id="confirmForm">
+      <div class="card-header bg-forest-light fw-semibold">
+        <i class="bi bi-pencil me-1"></i>Plant Details
+        <small class="text-muted ms-2">Review and edit before saving</small>
+      </div>
+      <div class="card-body">
+        <form method="post" action="/plants/identify/{{ temp_id }}" id="plantForm">
+
+          <!-- Visible key fields -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Common Name <span class="text-danger">*</span></label>
+              <input type="text" name="common_name" id="f_common_name" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Scientific Name</label>
+              <input type="text" name="scientific_name" id="f_scientific_name" class="form-control fst-italic">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Description</label>
+              <textarea name="description" id="f_description" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Personal Notes</label>
+              <textarea name="notes" class="form-control" rows="2" placeholder="Location in yard, purchase source, etc."></textarea>
+            </div>
+          </div>
+
+          <!-- All Trefle fields as hidden inputs (pre-filled by JS on selection) -->
+          {% set hidden_fields = [
+            "trefle_id","trefle_slug","family","family_common_name","genus",
+            "year","author","bibliography","status","rank",
+            "duration","edible","edible_part","vegetable","observations","trefle_image_url","synonyms",
+            "image_flower","image_leaf","image_habit","image_fruit","image_bark","image_other",
+            "distribution_native",
+            "flower_color","flower_conspicuous",
+            "foliage_texture","foliage_color","leaf_retention",
+            "fruit_conspicuous","fruit_color","fruit_shape","seed_persistence",
+            "ligneous_type","growth_form","growth_habit","growth_rate",
+            "average_height_cm","maximum_height_cm","nitrogen_fixation","shape_and_orientation","toxicity",
+            "sowing","days_to_harvest","ph_minimum","ph_maximum","light","atmospheric_humidity",
+            "growth_months","bloom_months","fruit_months",
+            "row_spacing_cm","spread_cm","minimum_precipitation_mm","maximum_precipitation_mm",
+            "minimum_root_depth_cm","minimum_temperature_deg_c","maximum_temperature_deg_c",
+            "soil_nutriments","soil_salinity","soil_texture","soil_humidity"
+          ] %}
+          {% for field in hidden_fields %}
+          <input type="hidden" name="{{ field }}" id="f_{{ field }}" value="">
+          {% endfor %}
+
+          <button type="submit" class="btn btn-forest">
+            <i class="bi bi-plus-circle me-1"></i>Save to Plant Database
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const suggestions = {{ suggestions | tojson }};
+
+document.querySelectorAll('.btn-select').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const s = suggestions[parseInt(btn.dataset.index)];
+    const set = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = (val === null || val === undefined) ? '' : val;
+    };
+
+    set('f_common_name',    s.common_name    || '');
+    set('f_scientific_name', s.scientific_name || '');
+    set('f_description',    s.description    || s.observations || '');
+
+    // All hidden Trefle fields
+    const fields = [
+      'trefle_id','trefle_slug','family','family_common_name','genus',
+      'year','author','bibliography','status','rank',
+      'duration','edible','edible_part','vegetable','observations','trefle_image_url','synonyms',
+      'image_flower','image_leaf','image_habit','image_fruit','image_bark','image_other',
+      'distribution_native',
+      'flower_color','flower_conspicuous',
+      'foliage_texture','foliage_color','leaf_retention',
+      'fruit_conspicuous','fruit_color','fruit_shape','seed_persistence',
+      'ligneous_type','growth_form','growth_habit','growth_rate',
+      'average_height_cm','maximum_height_cm','nitrogen_fixation','shape_and_orientation','toxicity',
+      'sowing','days_to_harvest','ph_minimum','ph_maximum','light','atmospheric_humidity',
+      'growth_months','bloom_months','fruit_months',
+      'row_spacing_cm','spread_cm','minimum_precipitation_mm','maximum_precipitation_mm',
+      'minimum_root_depth_cm','minimum_temperature_deg_c','maximum_temperature_deg_c',
+      'soil_nutriments','soil_salinity','soil_texture','soil_humidity'
+    ];
+    fields.forEach(f => {
+      let v = s[f];
+      if (v !== null && v !== undefined) {
+        if (typeof v === 'object') v = JSON.stringify(v);
+        set('f_' + f, v);
+      }
+    });
+
+    document.querySelectorAll('.suggestion-card').forEach(c => c.classList.remove('border-forest','border-2'));
+    btn.closest('.suggestion-card').classList.add('border-forest','border-2');
+    document.getElementById('confirmForm').scrollIntoView({behavior:'smooth'});
+  });
+});
+</script>
+{% endblock %}

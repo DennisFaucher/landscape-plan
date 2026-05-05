@@ -1,0 +1,10 @@
+services:
+  landscape-plan:
+    build: .
+    ports:
+      - "40070:8000"
+    volumes:
+      - ./data:/data
+      - ./.users:/app/.users:ro
+      - ./.env:/app/.env
+    restart: unless-stopped

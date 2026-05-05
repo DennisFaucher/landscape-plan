@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+  <h2 class="mb-0 text-forest"><i class="bi bi-gear me-2"></i>Settings</h2>
+</div>
+
+{% if message %}
+<div class="alert alert-info py-2">{{ message }}</div>
+{% endif %}
+
+<div class="card mb-4">
+  <div class="card-header bg-forest-light fw-semibold">
+    <i class="bi bi-google me-2"></i>Google Photos — OAuth Credentials
+  </div>
+  <div class="card-body">
+    <p class="text-muted small mb-3">
+      These credentials allow the app to let you sign in to Google and import photos directly
+      from your Google Photos library. They are stored in <code>/data/settings.json</code>
+      and never leave your server.
+    </p>
+
+    {% if not google_configured %}
+    <div class="alert alert-warning py-2 small mb-3">
+      <strong>Not yet configured.</strong> Follow the steps below to get your credentials.
+    </div>
+    {% else %}
+    <div class="alert alert-success py-2 small mb-3">
+      <i class="bi bi-check-circle me-1"></i>Google OAuth is configured.
+      Go to <a href="/plants/upload">Add Plant</a> and click <strong>Connect Google Photos</strong>.
+    </div>
+    {% endif %}
+
+    <!-- How-to instructions -->
+    <details class="mb-3">
+      <summary class="fw-semibold text-forest" style="cursor:pointer">
+        <i class="bi bi-question-circle me-1"></i>How to get Google OAuth credentials
+      </summary>
+      <ol class="mt-3 small">
+        <li>Go to <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> and sign in.</li>
+        <li>Create a new project (or select an existing one).</li>
+        <li>In the left menu go to <strong>APIs &amp; Services → Library</strong>.<br>
+            Search for <em>Photos Library API</em> and click <strong>Enable</strong>.</li>
+        <li>Go to <strong>APIs &amp; Services → OAuth consent screen</strong>.<br>
+            Choose <em>External</em>, fill in App name (e.g. "Landscape Planner"), your email, then <strong>Save and Continue</strong> through all steps.</li>
+        <li>Go to <strong>APIs &amp; Services → Credentials → Create Credentials → OAuth client ID</strong>.<br>
+            Application type: <em>Web application</em>.<br>
+            Under <strong>Authorized redirect URIs</strong> add:<br>
+            <code id="redirectUri" class="user-select-all">{{ request.base_url }}auth/google/callback</code>
+            <button class="btn btn-sm btn-outline-secondary ms-2 py-0" onclick="copyUri()">Copy</button>
+        </li>
+        <li>Click <strong>Create</strong>. Copy the <em>Client ID</em> and <em>Client Secret</em> shown.</li>
+        <li>Paste them in the form below and click Save.</li>
+      </ol>
+    </details>
+
+    <form method="post" action="/settings">
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Client ID</label>
+        <input type="text" name="google_client_id" class="form-control font-monospace"
+               value="{{ google_client_id }}"
+               placeholder="123456789-abc.apps.googleusercontent.com">
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Client Secret</label>
+        <input type="password" name="google_client_secret" id="clientSecret" class="form-control font-monospace"
+               value="{{ google_client_secret }}"
+               placeholder="GOCSPX-…">
+        <div class="form-check mt-1">
+          <input class="form-check-input" type="checkbox" id="showSecret"
+                 onchange="document.getElementById('clientSecret').type = this.checked ? 'text' : 'password'">
+          <label class="form-check-label small text-muted" for="showSecret">Show secret</label>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-forest">
+        <i class="bi bi-floppy me-1"></i>Save Credentials
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyUri() {
+  navigator.clipboard.writeText(document.getElementById('redirectUri').textContent.trim());
+}
+</script>
+{% endblock %}
