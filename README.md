@@ -32,7 +32,7 @@ A self-hosted, mobile-friendly web app for managing a plant database and designi
 ### 1. Clone or copy the project
 
 ```bash
-git clone <your-repo-url> landscape-plan
+git clone https://github.com/DennisFaucher/landscape-plan.git
 cd landscape-plan
 ```
 
